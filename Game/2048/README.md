@@ -23,10 +23,10 @@
 ## 如何运行
 
 1. 确保安装了Python和Pygame
-2. 在游戏目录中运行:
 ```
-python main.py
+pip install pygame
 ```
+2. 运行main.py文件:
 
 ## 项目结构
 
