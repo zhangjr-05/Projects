@@ -8,6 +8,9 @@ class GameRenderer:
         # 初始化字体
         pygame.font.init()
 
+        # 设置主题
+        self.theme = THEMES[CURRENT_THEME]
+
         # 创建游戏窗口
         self.screen = pygame.display.set_mode((WINDOW_WIDTH, WINDOW_HEIGHT))
         pygame.display.set_caption("2048 Game")
@@ -56,6 +59,9 @@ class GameRenderer:
 
     def _draw_grid(self, grid: list[list[int]]):
         '''绘制游戏网格和方块'''
+
+        self.screen.fill(self.theme["background"])
+
         for i in range(GRID_SIZE):
             for j in range(GRID_SIZE):
                 # 计算格子位置
@@ -66,14 +72,14 @@ class GameRenderer:
                 value = grid[i][j]
 
                 # 设置格子颜色
-                color = TILE_COLORS.get(value, (0, 0, 0))
+                color = self.theme["tile_colors"].get(value, (0, 0, 0))
 
                 # 绘制格子
                 pygame.draw.rect(self.screen, color, (x, y, CELL_SIZE, CELL_SIZE), 0, 5)
 
                 # 如果格子有值，绘制文字
                 if value != 0:
-                    text_color = TEXT_COLORS.get(value, (255, 255, 255))
+                    text_color = self.theme["text_dark"] if value >= 8 else self.theme["text_light"]
 
                     # 为不同大小的数字选择合适的字体
                     if value < 100:
@@ -135,4 +141,5 @@ class GameRenderer:
         record_text = self.big_font.render("NEW RECORD!", True, (249, 246, 242))
         text_rect = record_text.get_rect(center=(WINDOW_WIDTH // 2, WINDOW_HEIGHT // 2))
         self.screen.blit(record_text, text_rect)
+    
     

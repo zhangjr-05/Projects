@@ -4,6 +4,7 @@ import random
 import pygame
 from utils import *
 from renderer import GameRenderer
+from ai import AI2048
 
 def get_records_path():
     """获取records.txt文件的相对路径"""
@@ -211,7 +212,7 @@ class Game2048:
         self.game_state = GAME_LOST
 
 
-def run():
+def run(ai_mode=False):
         # 初始化pygame
         pygame.init()
 
@@ -219,20 +220,31 @@ def run():
         game = Game2048()
         renderer = GameRenderer()
 
+        # 如果使用AI模式，创建AI实例
+        if ai_mode:
+            ai = AI2048(game)
+
+
+        # AI移动延迟 (ms)
+        ai_delay = 100
+        last_ai_move_time = 0
+
         # 设置游戏时钟
         clock = pygame.time.Clock()
 
         # 游戏主循环
         running = True
         while running:
-
+            current_time = pygame.time.get_ticks()
+            
             # 处理事件
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
                     running = False
 
                 if event.type == pygame.KEYDOWN:
-                    if game.get_game_state() == GAME_RUNNING:
+
+                    if not ai_mode and game.get_game_state() == GAME_RUNNING:
                         if event.key == pygame.K_UP:
                             game.move(0)
                         elif event.key == pygame.K_RIGHT:
@@ -246,6 +258,23 @@ def run():
                         # 保存当前分数
                         save_score(game.get_score())
                         game = Game2048()
+                        if ai_mode:
+                            ai = AI2048(game)
+                    
+                    # A键切换AI/人类模式
+                    if event.key == pygame.K_a:
+                        ai_mode = not ai_mode
+                        if ai_mode:
+                            ai = AI2048(game)
+                        print(f"{'AI' if ai_mode else '人类'} 模式")
+
+            # AI模式下的移动
+            if ai_mode and game.get_game_state() == GAME_RUNNING:
+                # 限制AI移动频率
+                if current_time - last_ai_move_time > ai_delay:
+                    direction = ai.get_advanced_move()  # 使用高级评估函数
+                    game.move(direction)
+                    last_ai_move_time = current_time
 
             # 渲染
             renderer.render(game)
