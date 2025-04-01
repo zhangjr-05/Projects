@@ -37,3 +37,8 @@ python main.py
 - `records.txt`: 历史分数记录
 
 ## 许可证
+MIT License
+
+## 游戏截图
+
+![2048游戏截图](screenshots/demo.jpg)
