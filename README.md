@@ -1,0 +1,1 @@
+# A gallery of whispers and sparks, where curiosity took root and ideas grew wings—chronicled here to etch the rhythm of my becoming.
