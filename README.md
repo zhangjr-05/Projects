@@ -1,7 +1,7 @@
 ## WELCOME
 A gallery of whispers and sparks, where curiosity took root and ideas grew wings—chronicled here to etch the rhythm of my becoming.
 
-## 作者联系方式
+## CONTACT WITH ME
 
 QQ: 3508835924<br>
 WeChat: J18027726030<br>
