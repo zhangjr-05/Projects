@@ -6,42 +6,6 @@ from utils import *
 from renderer import GameRenderer
 from ai import AI2048
 
-def get_records_path():
-    """获取records.txt文件的相对路径"""
-    # 获取当前脚本所在目录
-    current_dir = os.path.dirname(os.path.abspath(__file__))
-    # 构建records.txt文件的路径
-    records_path = os.path.join(current_dir, "records.txt")
-    return records_path
-
-def load_highscores():
-    """读取历史最高分"""
-    try:
-        records_path = get_records_path()
-        if os.path.exists(records_path):
-            with open(records_path, "r") as f:
-                scores = [int(line.strip()) for line in f if line.strip().isdigit()]
-                return scores if scores else [0]
-        return [0]  # 如果文件不存在或为空，返回默认值
-    except Exception as e:
-        print(f"读取分数记录时出错: {e}")
-        return [0]  # 出错时返回默认值
-    
-def save_score(score):
-    """保存新的分数记录"""
-    if score == 0:
-        return
-    try:
-        scores = load_highscores()
-        scores.append(score)
-        scores.sort(reverse=True)
-        
-        records_path = get_records_path()
-        with open(records_path, "w") as f:
-            for s in scores:
-                f.write(f"{s}\n")
-    except Exception as e:
-        print(f"保存分数记录时出错: {e}")
 
 class Game2048:
     def __init__(self):
@@ -211,78 +175,76 @@ class Game2048:
         # 既没有空格也没有可合并的方块，凉了
         self.game_state = GAME_LOST
 
+def run():
+    # 初始化pygame
+    pygame.init()
 
-def run(ai_mode=False):
-        # 初始化pygame
-        pygame.init()
+    # 创建游戏和渲染器实例
+    game = Game2048()
+    renderer = GameRenderer()
 
-        # 创建游戏和渲染器实例
-        game = Game2048()
-        renderer = GameRenderer()
+    # 设置游戏时钟
+    clock = pygame.time.Clock()
 
-        # 如果使用AI模式，创建AI实例
-        if ai_mode:
-            ai = AI2048(game)
+    # AI移动延迟 (ms)
+    ai_mode = False
+    ai_delay = AI_DELAY
+    last_ai_move_time = 0
+    ai = None  # 初始化AI对象为None
 
+    # 游戏主循环
+    running = True
+    while running:
+        current_time = pygame.time.get_ticks()
+        
+        # 处理事件
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                running = False
 
-        # AI移动延迟 (ms)
-        ai_delay = 100
-        last_ai_move_time = 0
+            if event.type == pygame.KEYDOWN:
+                # 只有在非AI模式下才响应方向键
+                if not ai_mode and game.get_game_state() == GAME_RUNNING:
+                    if event.key == pygame.K_UP:
+                        game.move(0)
+                    elif event.key == pygame.K_RIGHT:
+                        game.move(1)
+                    elif event.key == pygame.K_DOWN:
+                        game.move(2)
+                    elif event.key == pygame.K_LEFT:
+                        game.move(3)
 
-        # 设置游戏时钟
-        clock = pygame.time.Clock()
+                if event.key == pygame.K_r:  # 按R重开
+                    # 保存当前分数
+                    save_score(game.get_score())
+                    game = Game2048()
 
-        # 游戏主循环
-        running = True
-        while running:
-            current_time = pygame.time.get_ticks()
-            
-            # 处理事件
-            for event in pygame.event.get():
-                if event.type == pygame.QUIT:
-                    running = False
+                # A键切换AI/人类模式
+                if event.key == pygame.K_a:
+                    ai_mode = not ai_mode
+                    if ai_mode:
+                        ai = AI2048(game)  # 初始化AI对象
+                    print(f"{'AI' if ai_mode else '人类'} 模式")
 
-                if event.type == pygame.KEYDOWN:
-
-                    if not ai_mode and game.get_game_state() == GAME_RUNNING:
-                        if event.key == pygame.K_UP:
-                            game.move(0)
-                        elif event.key == pygame.K_RIGHT:
-                            game.move(1)
-                        elif event.key == pygame.K_DOWN:
-                            game.move(2)
-                        elif event.key == pygame.K_LEFT:
-                            game.move(3)
-
-                    if event.key == pygame.K_r:  # 按R重开
-                        # 保存当前分数
-                        save_score(game.get_score())
-                        game = Game2048()
-                        if ai_mode:
-                            ai = AI2048(game)
-                    
-                    # A键切换AI/人类模式
-                    if event.key == pygame.K_a:
-                        ai_mode = not ai_mode
-                        if ai_mode:
-                            ai = AI2048(game)
-                        print(f"{'AI' if ai_mode else '人类'} 模式")
-
-            # AI模式下的移动
-            if ai_mode and game.get_game_state() == GAME_RUNNING:
-                # 限制AI移动频率
-                if current_time - last_ai_move_time > ai_delay:
-                    direction = ai.get_advanced_move()  # 使用高级评估函数
+        # AI模式下的移动
+        if ai_mode and game.get_game_state() == GAME_RUNNING and ai is not None:
+            # 限制AI移动频率
+            if current_time - last_ai_move_time > ai_delay:
+                try:
+                    direction = ai.get_move()
                     game.move(direction)
                     last_ai_move_time = current_time
+                except Exception as e:
+                    print(f"AI移动出错: {e}")
+                    # 如果AI移动出错，重置AI
+                    ai = AI2048(game)
+        # 渲染
+        renderer.render(game)
 
-            # 渲染
-            renderer.render(game)
-
-            # 控制帧率
-            clock.tick(30)
-        
-        # 保存记录并退出游戏
-        save_score(game.get_score())
-        pygame.quit()
-        sys.exit()
+        # 控制帧率
+        clock.tick(60)
+    
+    # 保存记录并退出游戏
+    save_score(game.get_score())
+    pygame.quit()
+    sys.exit()

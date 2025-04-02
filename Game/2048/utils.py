@@ -13,6 +13,9 @@ GAME_LOST = 2
 # 随机生成2的概率
 RANDOM_P_TWO = 0.8
 
+# AI移动延迟 (ms)
+AI_DELAY = 100
+
 # 定义颜色
 BACKGROUND_COLOR = (187, 173, 160)  # 背景色
 EMPTY_CELL_COLOR = (204, 192, 179)  # 空格子颜色
@@ -125,31 +128,6 @@ THEMES = {
         },
         "glow": True  # 特殊效果：发光
     },
-    "pastel": {
-        "name": "粉彩",
-        "background": (245, 240, 225),
-        "empty_cell": (235, 225, 210),
-        "text_light": (130, 120, 110),
-        "text_dark": (75, 65, 55),
-        "overlay": (255, 255, 255, 120),
-        "tile_colors": {
-            0: (235, 225, 210),
-            2: (240, 230, 220),
-            4: (245, 235, 200),
-            8: (250, 220, 190),
-            16: (255, 200, 180),
-            32: (255, 180, 170),
-            64: (255, 160, 150),
-            128: (210, 225, 180),
-            256: (190, 235, 170),
-            512: (170, 245, 160),
-            1024: (150, 255, 170),
-            2048: (130, 255, 180),
-            4096: (120, 235, 190),
-            8192: (110, 215, 200)
-        },
-        "rounded": 10  # 特殊效果：更圆润的方块
-    },
     "ocean": {
         "name": "海洋",
         "background": (20, 60, 80),
@@ -225,32 +203,45 @@ THEMES = {
         },
         "animation": "bounce"  # 特殊效果：弹跳动画
     },
-    "retro": {
-        "name": "复古",
-        "background": (60, 60, 60),
-        "empty_cell": (80, 80, 80),
-        "text_light": (200, 200, 200),
-        "text_dark": (255, 255, 255),
-        "overlay": (30, 30, 30, 180),
-        "tile_colors": {
-            0: (80, 80, 80),
-            2: (0, 240, 0),
-            4: (0, 200, 0),
-            8: (0, 180, 0),
-            16: (240, 240, 0),
-            32: (200, 200, 0),
-            64: (180, 180, 0),
-            128: (240, 120, 0),
-            256: (200, 100, 0),
-            512: (180, 80, 0),
-            1024: (240, 0, 0),
-            2048: (200, 0, 0),
-            4096: (160, 0, 0),
-            8192: (120, 0, 0)
-        },
-        "pixelated": True  # 特殊效果：像素化
-    }
 }
 
 # 当前主题
 CURRENT_THEME = "ocean"
+
+import os
+def get_records_path():
+    """获取records.txt文件的相对路径"""
+    # 获取当前脚本所在目录
+    current_dir = os.path.dirname(os.path.abspath(__file__))
+    # 构建records.txt文件的路径
+    records_path = os.path.join(current_dir, "records.txt")
+    return records_path
+
+def load_highscores():
+    """读取历史最高分"""
+    try:
+        records_path = get_records_path()
+        if os.path.exists(records_path):
+            with open(records_path, "r") as f:
+                scores = [int(line.strip()) for line in f if line.strip().isdigit()]
+                return scores if scores else [0]
+        return [0]  # 如果文件不存在或为空，返回默认值
+    except Exception as e:
+        print(f"读取分数记录时出错: {e}")
+        return [0]  # 出错时返回默认值
+    
+def save_score(score):
+    """保存新的分数记录"""
+    if score == 0:
+        return
+    try:
+        scores = load_highscores()
+        scores.append(score)
+        scores.sort(reverse=True)
+        
+        records_path = get_records_path()
+        with open(records_path, "w") as f:
+            for s in scores:
+                f.write(f"{s}\n")
+    except Exception as e:
+        print(f"保存分数记录时出错: {e}")
