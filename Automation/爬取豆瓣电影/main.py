@@ -6,18 +6,23 @@ import random
 import requests
 from bs4 import BeautifulSoup
 
+
+# 设定要爬取的电影部数
+MOVIE_NUMS = 10
+
+# 设置每部电影要爬的短评数
+COMMENT_COUNT = 60
+
 # 豆瓣 Top 250 的 URL
 BASE_URL = "https://movie.douban.com/top250"
 
 # 请求头，模拟浏览器访问
 HEADERS = {
-    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36",
-    "Cookie": "bid=YOUR_BID_HERE; douban-fav-remind=1;",
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/134.0.0.0 Safari/537.36",
+    "Cookie": 'bid=OQuhhchhpsU; _pk_id.100001.4cf6=a3c9f3b94181bdc1.1743497797.; __yadk_uid=w9UzsKIGoQpvsxJKMAm9Do3wyIefUqPL; ll="118159"; dbcl2="285887997:V+pLcM3/O94"; ck=xbwl; push_noty_num=0; push_doumail_num=0; frodotk_db="62249aeb1b10f2c6266dd0c15132d852"; __utmc=30149280; __utmz=30149280.1743600457.1.1.utmcsr=(direct)|utmccn=(direct)|utmcmd=(none); __utmc=223695111; __utmz=223695111.1743600457.1.1.utmcsr=(direct)|utmccn=(direct)|utmcmd=(none); _vwo_uuid_v2=D0215FA17C45C48CA96125BE6A0C92712|05c8fe408310efe223bb316bd09c3f6c; __utma=30149280.1901610314.1743600457.1743600457.1743602737.2; __utma=223695111.552024510.1743600457.1743600457.1743602737.2; __utmb=223695111.0.10.1743602737; _pk_ref.100001.4cf6=%5B%22%22%2C%22%22%2C1743602737%2C%22https%3A%2F%2Faccounts.douban.com%2F%22%5D; _pk_ses.100001.4cf6=1; ap_v=0,6.0; __utmt_douban=1; __utmt=1; __utmv=30149280.28588; __utmb=30149280.6.10.1743602737',
     "Referer": "https://movie.douban.com/",
 }
 
-# 设定要爬取的电影部数
-MOVIE_NUMS = 10
 
 def get_json_path():
     '''获取json文件的路径'''
@@ -40,7 +45,7 @@ def get_movie_links():
         for tag in soup.select(".hd a"):
             movie_links.append(tag["href"])
         
-        time.sleep(random.uniform(0.5, 1))  # 随机延时，降低被封风险
+        time.sleep(random.uniform(1, 2))  # 随机延时，降低被封风险
     return movie_links
 
 def extract_movie_id(url):
@@ -51,7 +56,7 @@ def extract_movie_id(url):
     match = re.search(pattern, url)
     return match.group(1) if match else None
 
-def get_movie_comments(movie_id, comment_count=60):
+def get_movie_comments(movie_id, comment_count=COMMENT_COUNT):
     """
     获取指定数量的电影短评
     """
@@ -61,7 +66,7 @@ def get_movie_comments(movie_id, comment_count=60):
     
     while len(comments) < comment_count:
         # 构建评论页URL
-        comment_url = f"https://movie.douban.com/subject/{movie_id}/comments?start={start}&limit={limit}&sort=new_score&status=P"
+        comment_url = f"https://movie.douban.com/subject/{movie_id}/comments?start={start}&limit={limit}&status=P&sort=new_score"
         
         response = requests.get(comment_url, headers=HEADERS)
         soup = BeautifulSoup(response.text, "html.parser")
@@ -104,54 +109,136 @@ def get_movie_comments(movie_id, comment_count=60):
             break
             
         # 随机延时，降低被封风险
-        time.sleep(random.uniform(0.5, 1))
+        time.sleep(random.uniform(1, 2))
     
     return comments[:comment_count]  # 返回指定数量的评论
 
 def get_movie_details(movie_url):
-    """
-    获取单部电影的详细信息和短评
-    """
-    response = requests.get(movie_url, headers=HEADERS)
-    soup = BeautifulSoup(response.text, "html.parser")
-    
-    # 提取电影基本信息
-    movie_info = {}
-    movie_info["name"] = soup.find("span", property="v:itemreviewed").text.strip()
-    movie_info["rating"] = soup.find("strong", class_="ll rating_num").text.strip()
-    movie_info["rating_count"] = soup.find("span", property="v:votes").text.strip()
-    movie_info["year"] = soup.find("span", class_="year").text.strip("()")
-    
-    # 提取导演
+    """获取单部电影的详细信息和短评"""
     try:
-        movie_info["director"] = soup.find("a", rel="v:directedBy").text.strip()
-    except AttributeError:
-        movie_info["director"] = "未知"
-    
-    # 提取类型
-    movie_info["genres"] = [genre.text.strip() for genre in soup.find_all("span", property="v:genre")]
-    
-    # 提取片长
-    try:
-        movie_info["duration"] = soup.find("span", property="v:runtime").text.strip()
-    except AttributeError:
-        movie_info["duration"] = "未知"
-    
-    # 提取简介
-    try:
-        movie_info["summary"] = soup.find("span", property="v:summary").text.strip()
-    except AttributeError:
-        summary_div = soup.find("div", class_="indent", id="link-report")
-        if summary_div:
-            movie_info["summary"] = summary_div.text.strip()
+        response = requests.get(movie_url, headers=HEADERS)
+        soup = BeautifulSoup(response.text, "html.parser")
+        
+        # 初始化电影信息字典
+        movie_info = {"no": "未知", "name": "未知", "rating": "未知", "rating_count": "0", "year": "未知", "country": "未知", "runtime": "未知", "IMDb": "未知", "intro": "未知"}
+        
+        # 提取排名
+        no = soup.find("span", class_="top250-no")
+        if no:
+            no = no.text.strip()
+            movie_info["no"] = re.match(r"No.(\d*)", no).group(1)
+
+        # 提取影片名
+        name_element = soup.find("span", property="v:itemreviewed")
+        if name_element:
+            movie_info["name"] = name_element.text.strip()
+        
+        # 提取评分
+        rating_element = soup.find("strong", class_="ll rating_num")
+        if rating_element:
+            movie_info["rating"] = rating_element.text.strip()
+ 
+        # 提取评分人数
+        rating_count_element = soup.find("span", property="v:votes")
+        if rating_count_element:
+            movie_info["rating_count"] = rating_count_element.text.strip()
+        
+        # 提取年份 
+        year_element = soup.find("span", class_="year")
+        if year_element:
+            movie_info["year"] = year_element.text.strip("()")
+
+        # 提取导演
+        directors = soup.find_all("a", rel="v:directedBy")
+        if directors:
+            movie_info["directors"] = [director.text.strip() for director in directors]
+        else:            
+            movie_info["directors"] = ["未知"]
+        
+        # 提取编剧
+        scriptwriters = soup.find('span', string=re.compile('编剧'))
+        if scriptwriters and scriptwriters.parent:
+            scriptwriters = scriptwriters.parent.find_all('a')
+            if scriptwriters:
+                movie_info["scriptwriters"] = [writer.text.strip() for writer in scriptwriters]
+            else:
+                movie_info["scriptwriters"] = ["未知"]
         else:
-            movie_info["summary"] = "无简介"
+            movie_info["scriptwriters"] = ["未知"]
+        
+        # 提取主演
+        stars = soup.find_all("a", rel="v:starring")
+        if stars:
+            movie_info['stars'] = [star.text.strip() for star in stars]
+        else:
+            movie_info['stars'] = ['未知']
+        
+        # 提取电影类型
+        genres = soup.find_all("span", property="v:genre")
+        if genres:
+            movie_info['genres'] = [genre.text.strip() for genre in genres]
+        else:
+            movie_info['genres'] = ['未知']
+        
+        # 提取制片国家/地区
+        country_span = soup.find('span', string=re.compile('制片国家/地区:'))
+        if country_span and country_span.next_sibling:
+            movie_info["country"] = country_span.next_sibling.strip()
+        else:
+            movie_info["country"] = "未知"
+
+        # 提取语言
+        language = soup.find('span', string=re.compile('语言'))
+        if language and language.next_sibling:
+            movie_info["country"] = language.next_sibling.strip()
+        else:
+            movie_info["country"] = "未知"
+
+        # 获取上映日期
+        screening_dates = soup.find_all("span", property="v:initialReleaseDate")
+        if genres:
+            movie_info['screening_dates'] = [screening_date.text.strip() for screening_date in screening_dates]
+        else:
+            movie_info['screening_dates'] = ['未知']
+
+        # 获取片长
+        runtime = soup.find("span", property="v:runtime")
+        if runtime:
+            movie_info["runtime"] = runtime.text.strip("()")
+        
+        # 提取又名
+        other_name = soup.find('span', string=re.compile('又名:'))
+        if other_name and other_name.next_sibling:
+            movie_info["other_name"] = other_name.next_sibling.strip().split(' / ')
+        else:
+            movie_info["other_name"] = ["未知"]
+
+        # 提取IMDb
+        IMDb = soup.find('span', string=re.compile('IMDb:'))
+        if IMDb and IMDb.next_sibling:
+            movie_info["IMDb"] = IMDb.next_sibling.strip()
+
+        # 提取电影简介
+        intro = soup.find("span", property="v:summary")
+        if intro:
+            movie_info["intro"] = intro.text.strip()
+
+        # 提取电影ID并获取短评
+        movie_id = extract_movie_id(movie_url)
+        if movie_id:
+            try:
+                movie_info["short_comments"] = get_movie_comments(movie_id, 60)
+            except Exception as e:
+                print(f"获取短评失败: {e}")
+                movie_info["short_comments"] = []
+        else:
+            movie_info["short_comments"] = []
+        
+        return movie_info
     
-    # 提取电影ID并获取短评
-    movie_id = extract_movie_id(movie_url)
-    movie_info["short_comments"] = get_movie_comments(movie_id, 60)  # 获取60条短评
-    
-    return movie_info
+    except Exception as e:
+        print(f"获取电影详情时发生错误: {e}")
+        return {"name": "获取失败", "error": str(e), "short_comments": []}
 
 def save_to_json(data, filename):
     """
@@ -161,6 +248,7 @@ def save_to_json(data, filename):
         json.dump(data, f, ensure_ascii=False, indent=4)
 
 def main():
+    all_movies = []
     try:
         # 获取所有电影链接
         print("正在获取电影链接...")
@@ -168,12 +256,11 @@ def main():
         print(f"共获取到 {len(movie_links)} 部电影链接")
         
         # 爬取每部电影的详细信息
-        all_movies = []
         for idx, movie_url in enumerate(movie_links[:MOVIE_NUMS]):  # 只爬取前 MOVIE_NUMS 部电影
             print(f"正在爬取第 {idx + 1} 部电影")
             movie_details = get_movie_details(movie_url)
             all_movies.append(movie_details)
-            time.sleep(random.uniform(0.5, 1))  # 随机延时，降低被封风险
+            time.sleep(random.uniform(1, 2))  # 随机延时，降低被封风险
         
         # 保存到 JSON 文件
         save_to_json(all_movies, json_path)
