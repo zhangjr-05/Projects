@@ -5,10 +5,10 @@ from game import *
 class GameRenderer:
     def __init__(self):
         '''初始化游戏渲染器'''
-        # 初始化字体
+        # Pygame初始化字体
         pygame.font.init()
 
-        # 设置主题
+        # 设置个性化主题 ~~
         self.theme = THEMES[CURRENT_THEME]
 
         # 创建游戏窗口
@@ -17,7 +17,6 @@ class GameRenderer:
 
         # 加载并缓存字体
         self._init_fonts()
-        
         # 预渲染固定文本
         self._init_text_surfaces()
 
@@ -26,7 +25,7 @@ class GameRenderer:
         self.show_record = False
 
     def _init_fonts(self):
-        '''初始化所有需要的字体'''
+        '''初始化所需字体'''
         self.fonts = {
             'normal': pygame.font.SysFont('Arial', 30, bold=True),
             'big': pygame.font.SysFont('Arial', 40, bold=True),
@@ -44,8 +43,11 @@ class GameRenderer:
         }
         
     def render(self, game):
-        '''渲染游戏画面'''
-        # 清空屏幕
+        '''
+        class GameRenderer 的关键函数
+        用于渲染游戏画面 实现可视化
+        '''
+        # 清空屏幕 (把背景铺好)
         self.screen.fill(self.theme["background"])
 
         # 绘制网格和方块
@@ -54,7 +56,7 @@ class GameRenderer:
         # 绘制分数
         self._draw_score(game.get_score(), game.high_score)
 
-        # 处理破纪录通知
+        # 处理破纪录通知 (记录都是AI破的，你没那个实力hhh)
         self._handle_record_notification(game)
         
         # 绘制游戏状态
@@ -62,14 +64,14 @@ class GameRenderer:
         if game_state != 0:  # 游戏不在运行状态
             self._draw_game_state(game_state)
         
-        # 刷新屏幕
+        # 刷新屏幕 (不刷新你看什么O.o)
         pygame.display.flip()
 
     def _handle_record_notification(self, game):
-        '''处理破纪录通知的显示逻辑'''
+        '''处理破纪录通知的显示'''
         current_time = pygame.time.get_ticks()
         
-        # 检查是否破纪录并显示通知
+        # 检查是否破纪录并显示通知 (这是永假式(bushi)
         if game.new_record and not self.show_record:
             self.show_record = True
             self.record_time = current_time
@@ -79,7 +81,7 @@ class GameRenderer:
         if self.show_record and current_time - self.record_time < 1000:
             self._draw_new_record()
         elif self.show_record:
-            self.show_record = False  # 超过1秒后停止显示
+            self.show_record = False  # 超过1秒后停止显示 (总不能一直挡着吧)
 
     def _draw_grid(self, grid: list[list[int]]):
         '''绘制游戏网格和方块'''
@@ -87,7 +89,7 @@ class GameRenderer:
             for j in range(GRID_SIZE):
                 # 计算格子位置
                 x = j * CELL_SIZE + (j + 1) * PADDING
-                y = i * CELL_SIZE + (i + 1) * PADDING
+                y = i * CELL_SIZE + (i + 1) * PADDING + SCORE_AREA # 注意SCORE_AREA区域用来显示分数
                 value = grid[i][j]
 
                 # 设置格子颜色
@@ -128,23 +130,34 @@ class GameRenderer:
         '''绘制游戏状态消息'''
         # 创建半透明覆盖层
         overlay = pygame.Surface((WINDOW_WIDTH, WINDOW_HEIGHT), pygame.SRCALPHA)
-        overlay.fill((255, 255, 255, 150))  # 半透明白色
+
+        if state == GAME_WON:
+            overlay.fill((255, 223, 0, 180))
+        else:
+            overlay.fill((255, 255, 255, 150))
+            
         self.screen.blit(overlay, (0, 0))
         
         # 选择并显示游戏状态消息
-        message_surface = self.text_surfaces['win'] if state == GAME_WON else self.text_surfaces['game_over']
+        if state == GAME_WON:
+            message_surface = self.fonts['big'].render("You Win!", True, (20, 20, 140))
+        else:
+            message_surface = self.text_surfaces['game_over']
+            
         message_rect = message_surface.get_rect(center=(WINDOW_WIDTH // 2, WINDOW_HEIGHT // 2 - 20))
         self.screen.blit(message_surface, message_rect)
-        
-        # 显示重启提示
-        restart_rect = self.text_surfaces['restart'].get_rect(center=(WINDOW_WIDTH // 2, WINDOW_HEIGHT // 2 + 20))
-        self.screen.blit(self.text_surfaces['restart'], restart_rect)
 
     def _draw_new_record(self):
         """显示破纪录通知"""
-        overlay = pygame.Surface((WINDOW_WIDTH, 50), pygame.SRCALPHA)
-        overlay.fill((237, 194, 46, 200))  # 黄色半透明背景
-        self.screen.blit(overlay, (0, WINDOW_HEIGHT // 2 - 25))
+        overlay = pygame.Surface((WINDOW_WIDTH, 60), pygame.SRCALPHA)
+        overlay.fill((220, 20, 60, 230))
+        self.screen.blit(overlay, (0, WINDOW_HEIGHT // 2 - 30))
         
-        text_rect = self.text_surfaces['new_record'].get_rect(center=(WINDOW_WIDTH // 2, WINDOW_HEIGHT // 2))
-        self.screen.blit(self.text_surfaces['new_record'], text_rect)
+        record_text = self.fonts['big'].render("NEW RECORD!", True, (255, 255, 0))
+        text_rect = record_text.get_rect(center=(WINDOW_WIDTH // 2, WINDOW_HEIGHT // 2))
+        
+        glow_text = self.fonts['big'].render("NEW RECORD!", True, (255, 255, 255))
+        glow_rect = glow_text.get_rect(center=(WINDOW_WIDTH // 2 + 2, WINDOW_HEIGHT // 2 + 2))
+        self.screen.blit(glow_text, glow_rect)
+
+        self.screen.blit(record_text, text_rect)

@@ -1,4 +1,3 @@
-import os
 import sys
 import random
 import pygame
@@ -17,7 +16,12 @@ class Game2048:
         self.new_record = False
         self.record_already_shown = False
 
+        # 游戏胜利!!!
+        self.win_time = 0      # 胜利时的时间戳
+        self.win_shown = False  # 是否已经显示过胜利信息
+
         # 添加两个初始方块
+        # 开局两个块，装备全靠抢
         self.add_new_tile()
         self.add_new_tile()
     
@@ -31,10 +35,11 @@ class Game2048:
             # 随机选择一个空白格子
             i, j = random.choice(empty_cells)
             # 生成2或4
-            self.grid[i][j] = 2 if random.random() < RANDOM_P_TWO else 4
+            self.grid[i][j] = TWO if random.random() < RANDOM_P_TWO else FOUR
             return True
         return False
     
+    # 一些工具方法
     def get_grid(self):
         '''返回当前网格'''
         return self.grid
@@ -48,7 +53,8 @@ class Game2048:
         return self.game_state
     
     def move(self, direction: int) -> bool:
-        """根据方向移动方块
+        """
+        关键函数，根据方向移动方块
         Args:
             direction (int): 方向: 0 = 上, 1 = 右, 2 = 下, 3 = 左
         Returns:
@@ -116,7 +122,7 @@ class Game2048:
     def _move_row_left(self, row_index: int):
         """
         将指定行向左移动并合并
-        这是所有移动的基础操作
+        关键函数，所有移动的基础操作
         Args:
             row_index (int): 移动行的下标
         """
@@ -140,7 +146,7 @@ class Game2048:
         self.grid[row_index] = row
     
     def _check_game_state(self):
-        '''检查游戏是否结束或者胜利'''
+        '''检查'''
 
         # 检查是否破纪录
         if self.score > self.high_score and not self.record_already_shown:
@@ -152,8 +158,10 @@ class Game2048:
 
         # 检查是否有2048方块
         for row in self.grid:
-            if 2048 in row:
+            if 2048 in row and not self.win_shown:
                 self.game_state = GAME_WON
+                self.win_time = pygame.time.get_ticks()
+                self.win_shown = True
                 return
         
         # 检查是否还有空格
@@ -176,6 +184,8 @@ class Game2048:
         self.game_state = GAME_LOST
 
 def run():
+    """梦开始的地方"""
+
     # 初始化pygame
     pygame.init()
 
@@ -218,6 +228,8 @@ def run():
                     # 保存当前分数
                     save_score(game.get_score())
                     game = Game2048()
+                    if ai_mode:
+                        ai = AI2048(game)  # 重新初始化AI对象
 
                 # A键切换AI/人类模式
                 if event.key == pygame.K_a:
@@ -238,6 +250,10 @@ def run():
                     print(f"AI移动出错: {e}")
                     # 如果AI移动出错，重置AI
                     ai = AI2048(game)
+
+        if game.get_game_state() == GAME_WON and (current_time - game.win_time >= 2000):
+            game.game_state = GAME_RUNNING  # 恢复运行，赢了继续玩
+
         # 渲染
         renderer.render(game)
 
