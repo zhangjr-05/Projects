@@ -1,6 +1,7 @@
 import time
 import random
 import pygame
+import os
 
 # 颜色参数
 blue = (35, 45, 75)
@@ -21,10 +22,14 @@ cd = 10 # 血包刷新冷却时间
 
 
 # 图片路径
-mkbl_path = 'd:/Projects/Game/双枪会给出答案/images/马可波罗.jpg'
-lbqh_path = 'd:/Projects/Game/双枪会给出答案/images/鲁班七号.jpg'
-Boom_path = 'd:/Projects/Game/双枪会给出答案/images/Boom.jpg'
-health_pack_path = 'd:/Projects/Game/双枪会给出答案/images/血包.jpg'
+
+# 获取当前脚本的目录
+base_dir = os.path.dirname(os.path.abspath(__file__))
+
+mkbl_path = os.path.join(base_dir, 'images', '马可波罗.jpg')
+lbqh_path = os.path.join(base_dir, 'images', '鲁班七号.jpg')
+Boom_path = os.path.join(base_dir, 'images', 'Boom.jpg')
+health_pack_path = os.path.join(base_dir, 'images', '血包.jpg')
 
 # 玩家设置
 class Player(pygame.sprite.Sprite):
