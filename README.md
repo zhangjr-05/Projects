@@ -1,6 +1,5 @@
-# A gallery of whispers and sparks, where curiosity took root and ideas grew wings—chronicled here to etch the rhythm of my becoming.
-
-
+## WELCOME
+A gallery of whispers and sparks, where curiosity took root and ideas grew wings—chronicled here to etch the rhythm of my becoming.
 
 ## 作者联系方式
 

@@ -36,7 +36,7 @@ pip install pygame
 - `ai.py`: 贪婪搜索AI
 - `renderer.py`: 图形渲染
 - `utils.py`: 工具和常量
-- `records.txt`: 历史分数记录
+- `records.json`: 历史分数记录
 
 ## 许可证
 No License
