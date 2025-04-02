@@ -2,4 +2,4 @@
 
 ## 请作者喝杯下午茶~~
 
-![THANKS](info/thanks.jpg)
+<img src="info/thanks.jpg" width="300" alt="THANKS" align="left">
