@@ -7,48 +7,37 @@ class AI2048:
     2048游戏的AI类定义 使用贪婪搜索策略
     """
     def __init__(self, game=None):
-        # 继承一下当前的game就完事了
-        # AI是接盘侠
+        # 继承一下当前的game就完事了 AI是接盘侠
         self.game = game
     
     def get_move(self) -> int:
-        """
-        使用有限深度的贪婪搜索确定最佳移动
-        """
+        """使用有限深度的贪婪搜索确定最佳移动"""
         if not self.game:
             return None
         
-        # 搜索深度 - 可以根据性能需求调整
-        depth = 3   # 设置到 4 我电脑崩了
-        
+        depth = 3   # 搜索深度 可以根据性能需求调整 不宜过大
         best_move, _ = self._look_ahead(self.game, depth)   # 最佳选择
-        
+
         if best_move is None:
             best_move = random.randint(0, 3)    # 没有就摆烂！
-        
         return best_move
     
     def _look_ahead(self, game, depth):
-        """
-        dfs递归搜索未来几步的最佳移动
-        """
+        """dfs递归搜索未来几步的最佳移动"""
         if depth == 0:
             return None, self._evaluate(game)
         
         best_score = -float('inf')
         best_move = None
-        
-        # 尝试四个方向
+
         for direction in range(4):
             game_copy = copy.deepcopy(game)
             if game_copy.move(direction):
-                # 第一层直接使用当前评估
-                if depth == 1:
+                if depth == 1: # 第一层直接使用当前评估
                     move_score = self._evaluate(game_copy)
                 else:
                     # 模拟随机添加一个新方块
-                    empty_cells_count = [(i, j) for i in range(GRID_SIZE) for j in range(GRID_SIZE) 
-                                  if game_copy.grid[i][j] == 0]
+                    empty_cells_count = [(i, j) for i in range(GRID_SIZE) for j in range(GRID_SIZE) if game_copy.grid[i][j] == 0]
                     if empty_cells_count:
                         # 考虑2和4这两种可能的新方块
                         scores = []
@@ -58,33 +47,52 @@ class AI2048:
                                 game_sim.grid[cell[0]][cell[1]] = value
                                 _, score = self._look_ahead(game_sim, depth - 1)
                                 scores.append(score)
-                        
                         # 取平均值作为期望分数
                         move_score = sum(scores) / len(scores) if scores else 0
                     else:
                         move_score = self._evaluate(game_copy)
-                
                 if move_score > best_score:
                     best_score = move_score
                     best_move = direction
-        
+                    
         return best_move, best_score
 
     def _evaluate(self, game):
         """
         贪婪策略评估函数
-        综合考虑多种高级策略因素，动态调整权重
+        综合考虑多种策略因素，动态调整权重
         """
         grid = game.get_grid()
         total_score = game.get_score()
         max_tile = max(max(row) for row in grid)
-        empty_cells_count = sum(row.count(0) for row in grid)
-        
+        empty_cells = [(i, j) for i in range(GRID_SIZE) for j in range(GRID_SIZE) if grid[i][j] == 0]
+        empty_cells_count = len(empty_cells)
         
         # 空格数量权重
         empty_weight = 16 if max_tile < 128 else 32 if max_tile < 256 else 64 if max_tile < 512 else 128 # 后期空格更重要
-        
         total_score += empty_cells_count * empty_weight
+
+        # 空白格分布评分
+        # BFS识别连通区域，奖励空格集中分布
+        if empty_cells_count > 0:
+            max_cluster = 0
+            visited = set()
+            for empty_cell in empty_cells:
+                if empty_cell in visited:
+                    continue
+                cluster_size = 1  # 集群计数
+                queue = [empty_cell]
+                visited.add(empty_cell)
+                while queue:
+                    i, j = queue.pop(0)
+                    for ni, nj in ((i-1,j), (i+1,j), (i,j-1), (i,j+1)):
+                        if 0 <= ni < GRID_SIZE and 0 <= nj < GRID_SIZE and grid[ni][nj] == 0 and (ni, nj) not in visited:
+                            cluster_size += 1
+                            queue.append((ni, nj))
+                            visited.add((ni, nj)) 
+                if cluster_size > max_cluster:
+                    max_cluster = cluster_size # 更新最大集群大小
+            total_score += max_cluster * max_tile / 4
         
         # 合并潜力与权重
         merge_potential = 0
@@ -156,7 +164,6 @@ class AI2048:
                 # 如果保持全局单调性，给予额外奖励
                 if monotonic and values[0] > 0:
                     path_score *= 1.5
-                
                 
                 if path_score > best_snake_score:
                     best_snake_score = path_score 
@@ -247,27 +254,11 @@ class AI2048:
         danger_weight = 1 if max_tile < 256 else 3 if max_tile < 2048 else 5
         total_score += danger_score * danger_weight
         
-        # 空白格分布评分
-        # 奖励空格集中分布，而不是散布各处
-        if empty_cells_count > 0:
-            neighbors = 0
-            for i in range(4):
-                for j in range(4):
-                    if grid[i][j] == 0:
-                        # 检查周围的空格
-                        if i > 0 and grid[i - 1][j] == 0: neighbors += 1
-                        if i < 3 and grid[i + 1][j] == 0: neighbors += 1
-                        if j > 0 and grid[i][j - 1] == 0: neighbors += 1
-                        if j < 3 and grid[i][j + 1] == 0: neighbors += 1
-            
-            # 空格聚集度评分
-            total_score += neighbors * max_tile / 4
-        
         # 游戏状态加成
         game_state = game.get_game_state()
         if game_state == 1:  # 游戏胜利
-            total_score += 10000000000  # 成功了疯狂奖励
+            total_score = float('inf')  # 成功了疯狂奖励
         elif game_state == 2:  # 游戏失败
-            total_score -= 10000000000  # 失败了疯狂惩罚
+            total_score = -float('inf')  # 失败了疯狂惩罚
         
         return total_score
