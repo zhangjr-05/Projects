@@ -120,7 +120,7 @@ def get_movie_details(movie_url):
         soup = BeautifulSoup(response.text, "html.parser")
         
         # 初始化电影信息字典
-        movie_info = {"no": "未知", "name": "未知", "rating": "未知", "rating_count": "0", "year": "未知", "country": "未知", "runtime": "未知", "IMDb": "未知", "intro": "未知"}
+        movie_info = {"no": "未知", "name": "未知", "rating": "未知", "rating_count": "0", "year": "未知", "country": "未知", "language": "未知", "runtime": "未知", "IMDb": "未知", "intro": "未知"}
         
         # 提取排名
         no = soup.find("span", class_="top250-no")
@@ -190,9 +190,9 @@ def get_movie_details(movie_url):
         # 提取语言
         language = soup.find('span', string=re.compile('语言'))
         if language and language.next_sibling:
-            movie_info["country"] = language.next_sibling.strip()
+            movie_info["language"] = language.next_sibling.strip()
         else:
-            movie_info["country"] = "未知"
+            movie_info["language"] = "未知"
 
         # 获取上映日期
         screening_dates = soup.find_all("span", property="v:initialReleaseDate")
