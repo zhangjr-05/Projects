@@ -7,9 +7,9 @@ WINDOW_WIDTH = GRID_SIZE * CELL_SIZE + (GRID_SIZE + 1) * PADDING
 WINDOW_HEIGHT = GRID_SIZE * CELL_SIZE + (GRID_SIZE + 1) * PADDING + SCORE_AREA # 额外的像素用于显示分数
 
 # 游戏状态
-GAME_RUNNING = 0
-GAME_WON = 1
-GAME_LOST = 2
+GAME_RUNNING = 0 # 游戏会继续运行
+GAME_WON = 1 # 在庆祝信息显示1s后恢复运行状态
+GAME_LOST = 2 # 游戏结束运行，等待用户操作
 
 # 随机生成2的概率
 RANDOM_P_TWO = 0.8
@@ -19,8 +19,8 @@ RANDOM_P_TWO = 0.8
 TWO = 2
 FOUR = 4
 
-# AI移动延迟 (ms)
-AI_DELAY = 150
+# AI移动延迟 (ms) 调节风扇声音大小
+AI_DELAY = 100
 
 # 主题定义
 THEMES = {

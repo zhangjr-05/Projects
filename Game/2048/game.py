@@ -213,7 +213,7 @@ def run():
                 running = False
 
             if event.type == pygame.KEYDOWN:
-                # 只有在非AI模式下才响应方向键
+                # 只有在非AI模式下才响应方向键(玩家不能干扰AI决策)
                 if not ai_mode and game.get_game_state() == GAME_RUNNING:
                     if event.key == pygame.K_UP:
                         game.move(0)
@@ -239,7 +239,7 @@ def run():
                     print(f"{'AI' if ai_mode else '人类'} 模式")
 
         # AI模式下的移动
-        if ai_mode and game.get_game_state() == GAME_RUNNING and ai is not None:
+        if ai_mode and game.get_game_state() == GAME_RUNNING and ai:
             # 限制AI移动频率
             if current_time - last_ai_move_time > ai_delay:
                 try:
@@ -247,8 +247,8 @@ def run():
                     game.move(direction)
                     last_ai_move_time = current_time
                 except Exception as e:
-                    print(f"AI移动出错: {e}")
-                    # 如果AI移动出错，重置AI
+                    print(f"服务器繁忙 请稍后再试 {e}")
+                    # 如果AI崩溃，重置AI
                     ai = AI2048(game)
 
         if game.get_game_state() == GAME_WON and (current_time - game.win_time >= 2000):

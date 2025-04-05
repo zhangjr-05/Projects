@@ -30,7 +30,7 @@ class AI2048:
     
     def _look_ahead(self, game, depth):
         """
-        递归搜索未来几步的最佳移动
+        dfs递归搜索未来几步的最佳移动
         """
         if depth == 0:
             return None, self._evaluate(game)
@@ -47,13 +47,13 @@ class AI2048:
                     move_score = self._evaluate(game_copy)
                 else:
                     # 模拟随机添加一个新方块
-                    empty_cells = [(i, j) for i in range(GRID_SIZE) for j in range(GRID_SIZE) 
+                    empty_cells_count = [(i, j) for i in range(GRID_SIZE) for j in range(GRID_SIZE) 
                                   if game_copy.grid[i][j] == 0]
-                    if empty_cells:
+                    if empty_cells_count:
                         # 考虑2和4这两种可能的新方块
                         scores = []
-                        for value in [2, 4]:
-                            for cell in empty_cells[:min(3, len(empty_cells))]:  # 限制随机位置样本数量提高效率
+                        for value in (TWO, FOUR):
+                            for cell in empty_cells_count[:min(3, len(empty_cells_count))]:  # 限制随机位置样本数量提高效率
                                 game_sim = copy.deepcopy(game_copy)
                                 game_sim.grid[cell[0]][cell[1]] = value
                                 _, score = self._look_ahead(game_sim, depth - 1)
@@ -76,45 +76,36 @@ class AI2048:
         综合考虑多种高级策略因素，动态调整权重
         """
         grid = game.get_grid()
-        score = game.get_score()
+        total_score = game.get_score()
         max_tile = max(max(row) for row in grid)
-        empty_cells = sum(row.count(0) for row in grid)
+        empty_cells_count = sum(row.count(0) for row in grid)
         
-        # 基础分数 - 增加权重
-        total_score = score * 1.5
         
         # 空格数量权重
-        empty_weight = 20
-        if max_tile >= 512:
-            empty_weight = 35  # 后期空格更重要
-        elif max_tile >= 256:
-            empty_weight = 25
+        empty_weight = 16 if max_tile < 128 else 32 if max_tile < 256 else 64 if max_tile < 512 else 128 # 后期空格更重要
         
-        total_score += empty_cells * empty_weight
+        total_score += empty_cells_count * empty_weight
         
-        # 合并潜力
+        # 合并潜力与权重
         merge_potential = 0
-        
+        merge_weight = 1 if max_tile < 256 else 1.2 if max_tile < 1024 else 1.5
         # 水平方向合并潜力
         for i in range(4):
             for j in range(3):
                 if grid[i][j] != 0:
                     # 直接相邻相同
-                    if grid[i][j] == grid[i][j+1]:
+                    if grid[i][j] == grid[i][j + 1]:
                         merge_potential += grid[i][j] * 2
-        
         # 垂直方向合并潜力
         for j in range(4):
             for i in range(3):
                 if grid[i][j] != 0:
                     # 直接相邻相同
-                    if grid[i][j] == grid[i+1][j]:
+                    if grid[i][j] == grid[i + 1][j]:
                         merge_potential += grid[i][j] * 2
+        total_score += merge_potential * merge_weight
         
-        total_score += merge_potential * 1.2
-        
-        # 多模板蛇形布局评分
-        # 定义多种潜在的最优路径模板
+        # 多模板蛇形布局评分 下为多种潜在的最优路径模板
         snake_paths = [
             # 经典Z字形蛇形路径
             [
@@ -141,43 +132,37 @@ class AI2048:
         
         # 计算每个路径的得分，选择最好的那个
         best_snake_score = 0
-        for path in snake_paths:
-            values = [grid[r][c] for r, c in path]
-            path_score = 0
-            
-            # 计算单调递减得分
-            monotonic = True
-            for i in range(len(values) - 1):
-                if values[i] != 0:
-                    if values[i] >= values[i + 1]:
-                        # 递减或相等
-                        path_score += 2
-                        # 额外奖励递减
+        for the_path in snake_paths:
+            for path in (the_path, the_path[::-1]): # 反转评价单调递增
+                values = [grid[r][c] for r, c in path]
+                path_score = 0
+                
+                # 计算单调递减得分
+                monotonic = True
+                for i in range(len(values) - 1):
+                    if values[i] != 0:
                         if values[i] > values[i + 1]:
                             if values[i + 1] != 0:
-                                path_score += 2
-                            else:  # 递减到0也给奖励
-                                path_score += 1
-                    else:
-                        # 不是递减，严重惩罚
-                        path_score -= 4
-                        monotonic = False
-            
-            # 如果保持全局单调性，给予额外奖励
-            if monotonic and values[0] > 0:
-                path_score *= 1.5
-            
-            # 检查最大值是否在路径起点
-            if values[0] == max_tile:
-                path_score *= 1.3
-            
-            best_snake_score = max(best_snake_score, path_score)
+                                path_score += values[i + 1]
+                            else:
+                                path_score += values[i] / 4
+                        elif values[i] == values[i + 1]:
+                            path_score += values[i]
+                        else:
+                            # 不是递减，则惩罚
+                            path_score -= values[i]
+                            monotonic = False
+                
+                # 如果保持全局单调性，给予额外奖励
+                if monotonic and values[0] > 0:
+                    path_score *= 1.5
+                
+                
+                if path_score > best_snake_score:
+                    best_snake_score = path_score 
         
         # 动态调整蛇形路径权重
-        snake_weight = 12
-        if max_tile >= 512:
-            snake_weight = 18  # 后期单调性更重要
-        
+        snake_weight = 1.8 if max_tile >= 512 else 1.2 # 后期单调性更重要
         total_score += best_snake_score * snake_weight
         
         # 角落策略评分
@@ -189,7 +174,7 @@ class AI2048:
         if max_tile in corner_values:
             corner_idx = corner_values.index(max_tile)
             corner_pos = corners[corner_idx]
-            corner_score += max_tile * 3  # 增加角落权重
+            corner_score += max_tile * 2
             
             # 在最大值周围构建递减序列
             if corner_pos == (0, 0):  # 左上角
@@ -229,83 +214,54 @@ class AI2048:
         
         total_score += corner_score
         
-        # 平滑度和梯度评分
+        # 平滑度评分
         smoothness = 0
-        gradient = 0
         
         for i in range(4):
             for j in range(4):
                 if grid[i][j] != 0:
                     # 计算平滑度 - 相邻格子差值越小越好
-                    if j < 3 and grid[i][j+1] != 0:
-                        diff = abs(grid[i][j] - grid[i][j+1])
+                    if j < 3 and grid[i][j + 1] != 0:
+                        diff = abs(grid[i][j] - grid[i][j + 1])
                         smoothness -= diff
-                        
-                        # 奖励单调递减梯度
-                        if grid[i][j] > grid[i][j+1]:
-                            gradient += min(4, grid[i][j] / max(1, grid[i][j+1]))
                     
-                    if i < 3 and grid[i+1][j] != 0:
-                        diff = abs(grid[i][j] - grid[i+1][j])
+                    if i < 3 and grid[i + 1][j] != 0:
+                        diff = abs(grid[i][j] - grid[i + 1][j])
                         smoothness -= diff
-                        
-                        # 奖励单调递减梯度
-                        if grid[i][j] > grid[i+1][j]:
-                            gradient += min(4, grid[i][j] / max(1, grid[i+1][j]))
         
         # 动态调整平滑度权重
-        smoothness_weight = 1.5
-        if max_tile >= 512:
-            smoothness_weight = 2.5  # 后期平滑度更重要
-        
+        smoothness_weight = 1.5 if max_tile <= 256 else 3 # 后期平滑度更重要
         total_score += smoothness * smoothness_weight
-        total_score += gradient * 8  # 梯度奖励
         
         # 危险格局惩罚
         danger_score = 0
         
-        # 检测危险的填充模式 (例如: 高低高低交替，难以合并)
-        for i in range(4):
-            alternating = 0
-            for j in range(3):
-                if grid[i][j] != 0 and grid[i][j+1] != 0:
-                    if (grid[i][j] > 2*grid[i][j+1] or grid[i][j+1] > 2*grid[i][j]):
-                        alternating += 1
-            danger_score -= alternating * 50
-        
-        for j in range(4):
-            alternating = 0
-            for i in range(3):
-                if grid[i][j] != 0 and grid[i+1][j] != 0:
-                    if (grid[i][j] > 2*grid[i+1][j] or grid[i+1][j] > 2*grid[i][j]):
-                        alternating += 1
-            danger_score -= alternating * 50
-        
         # 惩罚大数在中央的情形
         center_positions = [(1, 1), (1, 2), (2, 1), (2, 2)]
         for i, j in center_positions:
-            if grid[i][j] >= max_tile / 2:
-                danger_score -= grid[i][j] * 0.5
+            if grid[i][j] == max_tile:
+                danger_score -= max_tile
+            elif grid[i][j] == second_max:
+                danger_score -= second_max * 0.5
         
-        total_score += danger_score
+        danger_weight = 1 if max_tile < 256 else 3 if max_tile < 2048 else 5
+        total_score += danger_score * danger_weight
         
         # 空白格分布评分
         # 奖励空格集中分布，而不是散布各处
-        if empty_cells > 0:
-            empty_clusters = 0
+        if empty_cells_count > 0:
+            neighbors = 0
             for i in range(4):
                 for j in range(4):
                     if grid[i][j] == 0:
                         # 检查周围的空格
-                        neighbors = 0
-                        if i > 0 and grid[i-1][j] == 0: neighbors += 1
-                        if i < 3 and grid[i+1][j] == 0: neighbors += 1
-                        if j > 0 and grid[i][j-1] == 0: neighbors += 1
-                        if j < 3 and grid[i][j+1] == 0: neighbors += 1
-                        empty_clusters += neighbors
+                        if i > 0 and grid[i - 1][j] == 0: neighbors += 1
+                        if i < 3 and grid[i + 1][j] == 0: neighbors += 1
+                        if j > 0 and grid[i][j - 1] == 0: neighbors += 1
+                        if j < 3 and grid[i][j + 1] == 0: neighbors += 1
             
             # 空格聚集度评分
-            total_score += (empty_clusters / max(1, empty_cells)) * 30
+            total_score += neighbors * max_tile / 4
         
         # 游戏状态加成
         game_state = game.get_game_state()
